@@ -1,104 +1,72 @@
-
----
 - hosts: webservers
   become: true
   gather_facts: false
   tasks:
-  - name: updating the cache
-    apt:
-      update_cache: yes
-      
-  - name: installing pip
-    become: true
-    apt:
-     name: python3-pip
-     state: present
-     update_cache: true
-    
-  - name: installing flask
-    pip: name=flask
-  
+    - name: updatecache
+      apt:
+        update_cache: yes
+    - name: install pip
+      become: true
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: true
+    - name: install flask
+      pip: name=flask
 - hosts: HAproxy
   become: true
-
-#  vars:
-#    haproxy_maxconns: 4096
-#    haproxy_backlog: 2
-#    haproxy_timeout_q: 400ms
-#    haproxy_timoutconnect: 5000ms
-#    haproxy_timeoutclient: 5000ms
-#    haproxy_timoutserver: 5000ms
-#    haproxy_http_timeout: 15s
-#    haproxy_balance: leastconn
-#    haproxy_frontend_port: 80
-
   tasks:
-  
-  - name: Updating apt cache
-    become: yes
-    apt:
-      update_cache: yes
-      cache_valid_time: 7200
-
-  - name: Installing required packages
-    become: true
-    apt:
-      name: haproxy
-      state: latest   
-
-  - name: upgrading required packages
-    apt:
-      update_cache: yes
-      upgrade: dist
-      force_apt_get: yes
-    notify:
-      - run Haproxy      
-
-  - name: Gather required facts from servers
-    setup:
-       filter: ansible_default_ipv4.address
-
-
-  - name: Removing existing default_haproxy_cfg
-    file:
-       path: "/etc/haproxy/haproxy.cfg"
-       state: absent
-    notify:
-    - restart Haproxy 
-
-  - name: Deploy HAProxy configuration
-    template:
-      src: "./templates/haproxy.cfg"
-      dest: "/etc/haproxy/haproxy.cfg"
-    notify:
-      - restart Haproxy
-      - run Haproxy
-
+    - name: Update apt cache
+      become: yes
+      apt:
+        update_cache: yes
+        cache_valid_time: 7200
+    - name: Installing the packages
+      become: true
+      apt:
+        name: haproxy
+        state: latest
+    - name: upgrade packages
+      apt:
+        update_cache: 'yes'
+        upgrade: dist
+        force_apt_get: 'yes'
+      notify:
+        - run Haproxy
+    - name: Gather facts from servers
+      setup:
+        filter: ansible_default_ipv4.address
+    - name: Removing existing default_haproxy_cfg
+      file:
+        path: /etc/haproxy/haproxy.cfg
+        state: absent
+      notify:
+        - restart haproxy
+    - name: deploy new haproxy configuration
+      template:
+        src: ./templates/haproxy.cfg
+        dest: "/etc/haproxy/haproxy.cfg"
+      notify:
+        - restart haproxy
+        - run Haproxy
   handlers:
-
-  - name: run Haproxy
-    service:
-      name: haproxy
-      state: started
-
-  - name: restart Haproxy
-    service:
-      name: haproxy
-      state: restarted
--
-  hosts: webservers
+    - name: run Haproxy
+      service:
+        name: haproxy
+        state: started
+    - name: restart haproxy
+      service:
+        name: haproxy
+        state: restarted
+- hosts: webservers
   gather_facts: yes
-
   tasks:
+    - name: read application
+      copy: src=/etc/ansible/application2.py dest=./application2.py
     - name: start flask app
       shell: |
-        export FLASK_APP= application2.py
+        export FLASK_APP= /etc/ansible/application2.py
         export FLASK_RUN_HOST=0.0.0.0
         export FLASK_RUN_PORT=8080
-        flask run&
-    - name: restart flask
-      service:
-        name: flask
-        state: restarted
-      become: true
+        flask run&	
 
