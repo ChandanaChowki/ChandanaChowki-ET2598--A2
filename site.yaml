@@ -4,18 +4,18 @@
   become: true
   gather_facts: false
   tasks:
-  - name: updatecache
+  - name: updating the cache
     apt:
       update_cache: yes
       
-  - name: install pip
+  - name: installing pip
     become: true
     apt:
      name: python3-pip
      state: present
      update_cache: true
     
-  - name: install flask
+  - name: installing flask
     pip: name=flask
   
 - hosts: HAproxy
@@ -34,19 +34,19 @@
 
   tasks:
   
-  - name: Update apt cache
+  - name: Updating apt cache
     become: yes
     apt:
       update_cache: yes
       cache_valid_time: 7200
 
-  - name: Installing the packages
+  - name: Installing required packages
     become: true
     apt:
       name: haproxy
       state: latest   
 
-  - name: upgrade packages
+  - name: upgrading required packages
     apt:
       update_cache: yes
       upgrade: dist
@@ -54,7 +54,7 @@
     notify:
       - run Haproxy      
 
-  - name: Gather facts from servers
+  - name: Gather required facts from servers
     setup:
        filter: ansible_default_ipv4.address
 
