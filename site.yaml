@@ -1,6 +1,6 @@
 - hosts: webservers
   become: true
-  gather_facts: false
+  gather_facts: true
   tasks:
     - name: updatecache
       apt:
@@ -31,8 +31,7 @@
         update_cache: 'yes'
         upgrade: dist
         force_apt_get: 'yes'
-      notify:
-        - run Haproxy
+
     - name: Gather facts from servers
       setup:
         filter: ansible_default_ipv4.address
@@ -41,20 +40,16 @@
         path: /etc/haproxy/haproxy.cfg
         state: absent
       notify:
-        - restart haproxy
+        - restart Haproxy
     - name: deploy new haproxy configuration
       template:
         src: ./templates/haproxy.cfg
-        dest: "/etc/haproxy/haproxy.cfg"
+        dest: /etc/haproxy/haproxy.cfg
       notify:
-        - restart haproxy
-        - run Haproxy
+        - restart Haproxy
+      
   handlers:
-    - name: run Haproxy
-      service:
-        name: haproxy
-        state: started
-    - name: restart haproxy
+    - name: restart Haproxy
       service:
         name: haproxy
         state: restarted
@@ -65,7 +60,7 @@
       copy: src=/etc/ansible/application2.py dest=./application2.py
     - name: start flask app
       shell: |
-        export FLASK_APP= /etc/ansible/application2.py
+        export FLASK_APP=./application2.py
         export FLASK_RUN_HOST=0.0.0.0
         export FLASK_RUN_PORT=8080
         flask run&	
