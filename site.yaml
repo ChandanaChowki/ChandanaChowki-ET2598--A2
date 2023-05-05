@@ -1,67 +1,96 @@
-- hosts: webservers
-  become: true
-  gather_facts: true
+
+---
+- become: yes
+  hosts: webservers 
+  gather_facts: yes
+    
+- hosts: HAproxy
+  gather_facts: yes
+  become: yes
+  become_method: sudo
+  
   tasks:
-    - name: updatecache
-      apt:
-        update_cache: yes
-    - name: install pip
-      become: true
-      apt:
+  
+  - name: "update apt cache"
+    become: yes
+    apt:
+        update_cache: true
+        
+  - name: "install HAproxy"
+    apt:
+        name: haproxy
+        state: latest
+        
+  - name: delete previous haproxy configuration 
+    file:
+       path: "/etc/haproxy/haproxy.cfg"
+       state: absent
+
+  - name: "Deploy new HAproxy"
+    template:
+         src: "./haproxy.cfg.j2"
+         dest: "/etc/haproxy/haproxy.cfg"        
+    notify: "Start HAproxy"
+  
+  - name: "restarting HAproxy"
+    service:
+         name: haproxy
+         state: restarted
+         enabled: yes  
+             
+         
+  handlers:
+  - name: "Start HAproxy"
+    service:
+         name: haproxy
+         state: restarted
+         
+         
+- hosts: webservers
+  become: yes
+  become_method: sudo
+  gather_facts: yes
+  
+  tasks:
+  
+  
+  - name: "update cache"
+    apt:
+        update_cache: true
+
+  - name: "install pip3"
+    apt:
         name: python3-pip
         state: present
         update_cache: true
-    - name: install flask
-      pip: name=flask
-- hosts: HAproxy
-  become: true
-  tasks:
-    - name: Update apt cache
-      become: yes
-      apt:
-        update_cache: yes
-        cache_valid_time: 7200
-    - name: Installing the packages
-      become: true
-      apt:
-        name: haproxy
-        state: latest
-    - name: upgrade packages
-      apt:
-        update_cache: 'yes'
-        upgrade: dist
-        force_apt_get: 'yes'
+        
+  - name: install flask
+    pip: 
+      executable: pip3
+      name: flask
+      state: latest
+    
+  - name: fetch application
+    copy: src=application2.py dest=./application2.py 
+    
+  - name: "install gunicorn"
+    apt:
+        name: gunicorn
 
-    - name: Gather facts from servers
-      setup:
-        filter: ansible_default_ipv4.address
-    - name: Removing existing default_haproxy_cfg
-      file:
-        path: /etc/haproxy/haproxy.cfg
-        state: absent
-      notify:
-        - restart Haproxy
-    - name: deploy new haproxy configuration
-      template:
-        src: ./templates/haproxy.cfg
-        dest: /etc/haproxy/haproxy.cfg
-      notify:
-        - restart Haproxy
-      
-  handlers:
-    - name: restart Haproxy
-      service:
-        name: haproxy
-        state: restarted
-- hosts: webservers
-  gather_facts: yes
-  tasks:
-    - name: read application
-      copy: src=/etc/ansible/application2.py dest=./application2.py
-    - name: start flask app
-      shell: |
-        export FLASK_APP=./application2.py
-        export FLASK_RUN_HOST=0.0.0.0
-        export FLASK_RUN_PORT=8080
-        flask run&	
+  - name: "install flask"
+    apt:
+        name: python3-flask
 
+  - name: "copying Application2.py"
+    copy:
+        src: application2.py
+        dest: /home/ubuntu/application2.py
+        
+  - name: "Running Flask app"
+    shell: gunicorn -w 2 -D -b 0.0.0.0:8080 application2:app
+    
+   
+           
+
+        
+  
