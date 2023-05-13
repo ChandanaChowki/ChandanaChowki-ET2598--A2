@@ -1,0 +1,126 @@
+
+---
+- become: yes
+  hosts: webservers 
+  gather_facts: yes
+    
+- hosts: HAproxy
+  gather_facts: yes
+  become: yes
+  become_method: sudo
+  
+  tasks:
+  
+  - name: "update apt cache"
+    become: yes
+    apt:
+        update_cache: true
+        
+  - name: "install HAproxy"
+    apt:
+        name: haproxy
+        state: latest
+        
+  - name: delete previous haproxy configuration 
+    file:
+       path: "/etc/haproxy/haproxy.cfg"
+       state: absent
+
+  - name: "Deploy new HAproxy"
+    template:
+         src: "./haproxy.cfg.j2"
+         dest: "/etc/haproxy/haproxy.cfg"        
+    notify: "Start HAproxy"
+  
+  - name: "restarting HAproxy"
+    service:
+         name: haproxy
+         state: restarted
+         enabled: yes  
+             
+  - name: "installing Nginx"
+    apt:
+        name: nginx
+        state: latest
+
+  - name: "Configuring UDP loadbalancing"  
+    template:
+         src: "./nginx.j2"
+         dest: "/etc/nginx/nginx.conf"
+         
+  - name: "restarting nginx"
+    service:
+         name: nginx
+         state: restarted
+         
+  handlers:
+  - name: "Start HAproxy"
+    service:
+         name: haproxy
+         state: restarted
+         
+         
+- hosts: webservers
+  become: yes
+  become_method: sudo
+  gather_facts: yes
+  
+  tasks:
+  
+  
+  - name: "update cache"
+    apt:
+        update_cache: true
+
+  - name: "install pip3"
+    apt:
+        name: python3-pip
+        state: present
+        update_cache: true
+        
+  - name: install flask
+    pip: 
+      executable: pip3
+      name: flask
+      state: latest
+    
+  - name: fetch application
+    copy: src=application2.py dest=./application2.py 
+    
+  - name: "install gunicorn"
+    apt:
+        name: gunicorn
+
+  - name: "install flask"
+    apt:
+        name: python3-flask
+        
+  - name: "install snmpd"
+    apt:
+        name: snmpd
+        state: latest
+        
+  - name: "Configuring snmpd" 
+    template:
+         src: "./snmpd.conf"
+         dest: "/etc/snmp/snmpd.conf"
+    
+  - name: "restarting snmpd"
+    service:
+         name: snmpd
+         state: restarted
+         enabled: yes
+
+  - name: "copying Application2.py"
+    copy:
+        src: application2.py
+        dest: /home/ubuntu/application2.py
+        
+  - name: "Running Flask app"
+    shell: gunicorn -w 2 -D -b 0.0.0.0:8080 application2:app
+    
+   
+           
+
+        
+  

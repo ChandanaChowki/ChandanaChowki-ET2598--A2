@@ -1,0 +1,37 @@
+Host BastionNSO
+    User ubuntu
+    Hostname 188.240.22.41
+    IdentityFile ~/.ssh/id_rsa
+    StrictHostKeyChecking no
+    PasswordAuthentication no
+   
+Host HAproxy
+    User ubuntu
+    Hostname 188.240.222.56
+    IdentityFile ~/.ssh/id_rsa
+    StrictHostKeyChecking no
+    PasswordAuthentication no
+    
+Host devA
+    User ubuntu
+    Hostname 10.2.0.16
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump bastionNSO
+    StrictHostKeyChecking no
+    PasswordAuthentication no
+    
+Host devB
+    User ubuntu
+    Hostname 10.2.0.192
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump bastionET2598
+    StrictHostKeyChecking no
+    PasswordAuthentication no
+    
+Host devC
+    User ubuntu
+    Hostname 10.2.0.82
+    IdentityFile ~/.ssh/id_rsa
+    ProxyJump bastionET2598
+    StrictHostKeyChecking no
+    PasswordAuthentication no
